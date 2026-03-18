@@ -108,12 +108,6 @@ lerobot-record \
 | `--dataset.episode_time_s` | Max time per episode in seconds |
 | `--display_data` | Show camera feeds while recording |
 
-## Web UI Development
-
-When implementing a new feature or encountering an unfixed issue in the Web UI, always update `src/lerobot/webui/PROGRESS.md`:
-- Add a dated entry under the **Changelog** section describing what was added or what issue was found
-- Include which backend/frontend files were affected
-
 ## Troubleshooting
 
 ### FFmpeg Duplicate Class Warnings
