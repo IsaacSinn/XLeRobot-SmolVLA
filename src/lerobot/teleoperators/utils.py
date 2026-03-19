@@ -85,5 +85,9 @@ def make_teleoperator_from_config(config: TeleoperatorConfig) -> Teleoperator:
         from .reachy2_teleoperator import Reachy2Teleoperator
 
         return Reachy2Teleoperator(config)
+    elif config.type == "elrobot_leader":
+        from .elrobot_leader import ElrobotLeader
+
+        return ElrobotLeader(config)
     else:
         raise ValueError(config.type)

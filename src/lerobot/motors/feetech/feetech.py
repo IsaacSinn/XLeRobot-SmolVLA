@@ -292,12 +292,17 @@ class FeetechMotorsBus(FeetechCalibrationMixin, MotorsBus):
         """
         On Feetech Motors:
         Present_Position = Actual_Position - Homing_Offset
+
+        Homing_Offset register uses 11-bit sign-magnitude, range ±2047; clamp to avoid encode error.
         """
+        homing_offset_max = 2047
         half_turn_homings = {}
         for motor, pos in positions.items():
             model = self._get_motor_model(motor)
             max_res = self.model_resolution_table[model] - 1
-            half_turn_homings[motor] = pos - int(max_res / 2)
+            offset = pos - int(max_res / 2)
+            offset = max(-homing_offset_max, min(homing_offset_max, offset))
+            half_turn_homings[motor] = offset
 
         return half_turn_homings
 
