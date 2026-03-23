@@ -402,6 +402,68 @@ class FeetechCalibrationMixin:
                 ) from e
         raise RuntimeError(f"safe_write: 无法写入 {reg} on {motor_name}")
 
+    def _write_torque_with_recovery(
+        self, motor: str, value: int, retries: int = 3, interval_s: float = 0.5
+    ) -> None:
+        """写 Torque_Enable，根据异常类型分别恢复后重试。
+
+        - RuntimeError（Overload）：先关扭矩清除过载状态，等待后重试。
+        - ConnectionError（无应答）：直接等待后重试。
+        超过重试次数仍失败则继续抛出。
+        """
+        for attempt in range(retries):
+            try:
+                self.write("Torque_Enable", motor, value)
+                return
+            except RuntimeError as e:
+                # Overload：关扭矩清除过载，等待后重试
+                if attempt < retries - 1:
+                    print(
+                        f"  [{motor_label(motor)}] Torque_Enable={value} Overload，清除后重试"
+                        f"({attempt + 1}/{retries}): {e}"
+                    )
+                    try:
+                        self.write("Torque_Enable", motor, 0)
+                    except COMM_ERR:
+                        pass
+                    time.sleep(interval_s)
+                else:
+                    raise RuntimeError(
+                        f"_write_torque_with_recovery: {retries}次均失败 Torque_Enable={value} on {motor}: {e}"
+                    ) from e
+            except ConnectionError as e:
+                # 无应答：等待后重试
+                if attempt < retries - 1:
+                    print(
+                        f"  [{motor_label(motor)}] Torque_Enable={value} 无应答，等待后重试"
+                        f"({attempt + 1}/{retries}): {e}"
+                    )
+                    time.sleep(interval_s)
+                else:
+                    raise RuntimeError(
+                        f"_write_torque_with_recovery: {retries}次均失败 Torque_Enable={value} on {motor}: {e}"
+                    ) from e
+
+    def _clear_and_enable_torque(self, motor: str, settle_s: float = OVERLOAD_SETTLE_TIME) -> None:
+        """清除过载后重新上力矩：先关扭矩等待，再带恢复重试上力矩。
+
+        用于堵转停止后需要反向运动的场合，替代裸 enable_torque 调用。
+        """
+        # 关扭矩清除过载状态（已有重试逻辑）
+        for _ in range(5):
+            try:
+                self.write("Torque_Enable", motor, 0)
+                break
+            except COMM_ERR:
+                time.sleep(0.1)
+        time.sleep(settle_s)
+        # 带恢复重试上力矩
+        self._write_torque_with_recovery(motor, 1)
+        try:
+            self.write("Lock", motor, 1)
+        except COMM_ERR:
+            pass
+
     def safe_write_position_limits(
         self,
         motor: NameOrID,
@@ -517,7 +579,7 @@ class FeetechCalibrationMixin:
         print(f"  [{motor_label(motor)}] CW 停止原因: {cw_reasons[motor]}")
         print(f"  [{motor_label(motor)}] CW 堵转位置: {pos_cw_dict[motor]}")
 
-        self.enable_torque(motor)
+        self._clear_and_enable_torque(motor)
         time.sleep(0.05)
         ccw_reasons, pos_ccw_dict = self._run_direction_until_stall(
             [motor],
@@ -590,10 +652,8 @@ class FeetechCalibrationMixin:
         for m in motors:
             label = "CCW" if first_vel_dict[m] < 0 else "CW"
             print(f"  [{motor_label(m)}] {label} 停止原因: {first_reasons[m]}, 堵转位置: {first_pos[m]}")
-        time.sleep(OVERLOAD_SETTLE_TIME)
-
         for m in motors:
-            self.enable_torque(m)
+            self._clear_and_enable_torque(m)
         time.sleep(0.05)
         second_reasons, second_pos = self._run_direction_until_stall(
             motors,
@@ -869,8 +929,8 @@ class FeetechCalibrationMixin:
         print(f"\n--- 展开 {motor_label(motor)} ({target_steps}步 ≈ {unfold_angle:.1f}°) ---")
 
         # 校正中位（Torque_Enable=128 将当前位置设为 2048）
-        self.write("Torque_Enable", motor, 128)
-        self.write("Torque_Enable", motor, 1)
+        self._write_torque_with_recovery(motor, 128)
+        self._write_torque_with_recovery(motor, 1)
 
         time.sleep(0.1)
         print(
@@ -879,7 +939,7 @@ class FeetechCalibrationMixin:
         time.sleep(0.1)
         # 恢复伺服模式（128 可能改变了模式状态）并上力矩
         self.write("Operating_Mode", motor, 0)
-        self.write("Torque_Enable", motor, 1)
+        self._write_torque_with_recovery(motor, 1)
         time.sleep(0.3)
         # 尝试正方向
         # print(f"    [{motor_label(motor)}] 尝试正方向...")
