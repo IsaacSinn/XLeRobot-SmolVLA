@@ -81,7 +81,7 @@ HOMING_OFFSET_MAX_MAG = 2047
 # ---------------------------------------------------------------------------
 DEFAULT_VELOCITY_LIMIT = 1000       # 校准探测限位速度（恒速模式 Goal_Velocity）
 DEFAULT_MAX_TORQUE = 1000           # 最大扭矩（Max_Torque_Limit）
-DEFAULT_TORQUE_LIMIT = 600         # 扭矩限制（Torque_Limit）
+DEFAULT_TORQUE_LIMIT = 380         # 扭矩限制（Torque_Limit）
 DEFAULT_ACCELERATION = 50           # 加速度（与项目 configure_motors 一致）
 DEFAULT_POS_SPEED = 1000            # 伺服模式 WritePosEx 默认速度
 DEFAULT_P_COEFFICIENT = 16          # PID P 系数（与 so_follower 一致）
