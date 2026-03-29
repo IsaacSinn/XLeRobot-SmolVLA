@@ -182,7 +182,7 @@ conda install -c conda-forge ffmpeg
 
 ```bash
 git clone https://github.com/Maker-Mods/lerobot-MakerMods.git
-cd lerobot
+cd lerobot-MakerMods/
 ```
 
 ### 5. Install LeRobot with Dependencies
