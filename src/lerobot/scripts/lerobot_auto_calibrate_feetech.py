@@ -26,11 +26,11 @@
 
 用法示例：
 
-  lerobot-measure-feetech-ranges --port COM3
-  lerobot-measure-feetech-ranges --port COM3 --save
-  lerobot-measure-feetech-ranges --port COM3 --unfold-angle 0
-  lerobot-measure-feetech-ranges --port COM3 --save --robot-id default
-  lerobot-measure-feetech-ranges --port COM3 --unfold-only   # 仅调试臂展开（阶段0+阶段2）
+  lerobot-auto-calibrate-feetech --port COM3
+  lerobot-auto-calibrate-feetech --port COM3 --save
+  lerobot-auto-calibrate-feetech --port COM3 --unfold-angle 0
+  lerobot-auto-calibrate-feetech --port COM3 --save --robot-id default
+  lerobot-auto-calibrate-feetech --port COM3 --unfold-only   # 仅调试臂展开（阶段0+阶段2）
 """
 
 import argparse
@@ -107,7 +107,12 @@ def parse_args() -> argparse.Namespace:
     )
     out.add_argument(
         "--robot-id", type=str, default="default",
-        help="保存时的机器人 id，对应路径 .../calibration/robots/so_follower/<robot_id>.json，与机械臂启动时 config.id 一致",
+        help="保存时的机器人 id，对应路径 .../calibration/robots/<robot_type>/<robot_id>.json，与机械臂启动时 config.id 一致",
+    )
+    out.add_argument(
+        "--robot-type", type=str, default="so_follower",
+        choices=["so_follower", "so_leader"],
+        help="Robot type for calibration file path: 'so_follower' (default) or 'so_leader'",
     )
 
     return parser.parse_args()
@@ -478,6 +483,7 @@ def run_full_calibration(
     *,
     save: bool = False,
     robot_id: str = "default",
+    robot_type: str = "so_follower",
     velocity_limit: int = DEFAULT_VELOCITY_LIMIT,
     timeout_s: float = DEFAULT_TIMEOUT,
     unfold_timeout_s: float = DEFAULT_UNFOLD_TIMEOUT,
@@ -597,7 +603,7 @@ def run_full_calibration(
             bus.write_calibration(cal, cache=True)
             print("已写入校准到舵机 EEPROM。")
             # 与手动校准相同路径与格式，供机械臂启动时加载
-            calibration_fpath = HF_LEROBOT_CALIBRATION / "robots" / "so_follower" / f"{robot_id}.json"
+            calibration_fpath = HF_LEROBOT_CALIBRATION / "robots" / robot_type / f"{robot_id}.json"
             calibration_fpath.parent.mkdir(parents=True, exist_ok=True)
             with open(calibration_fpath, "w") as f, draccus.config_type("json"):
                 draccus.dump(cal, f, indent=4)
@@ -687,6 +693,7 @@ def main() -> int:
         args.port,
         save=args.save,
         robot_id=args.robot_id,
+        robot_type=args.robot_type,
         velocity_limit=args.velocity_limit,
         timeout_s=args.timeout,
         unfold_timeout_s=args.unfold_timeout,
