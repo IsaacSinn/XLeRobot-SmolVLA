@@ -51,27 +51,28 @@ def xlerobot_cameras_config() -> dict[str, CameraConfig]:
 @dataclass
 class XLerobotConfig(RobotConfig):
     
-    port1: str = "/dev/ttyACM0"  # 左臂 + 头部总线
-    port2: str = "/dev/ttyACM1"  # 右臂 + 底盘三轮总线
+    port1: str = "/dev/ttyACM0"  # left arm + head bus
+    port2: str = "/dev/ttyACM1"  # right arm + base three-wheel bus
     disable_torque_on_disconnect: bool = True
 
-    # 安全限制：每步最大相对位置增量（None = 不限制）
+    # Safety limit: max relative position increment per step (None = no limit)
     max_relative_target: int | None = None
 
     cameras: dict[str, CameraConfig] = field(default_factory=xlerobot_cameras_config)
 
-    # 设为 True 以兼容旧策略/数据集
+    # Set to True for compatibility with old policies/datasets
     use_degrees: bool = False
 
-    # 三万向轮底盘运动学参数（根据实体机测量值填入）
-    wheel_radius: float = 0.05     # 轮子半径（米），默认 5cm
-    base_radius: float = 0.125     # 底盘中心到轮子距离（米），默认 12.5cm
-    # 三个轮的安装位置角（度）：以机器人正前方为 0°，逆时针为正方向
-    # 默认值对应三轮顺序：[base_left_wheel, base_back_wheel, base_right_wheel]
-    #   φ=240°(右后)  → base_left_wheel  （代码标签，物理在右后）
-    #   φ=0°  (正前)  → base_back_wheel  （代码标签，物理在正前）
-    #   φ=120°(左后)  → base_right_wheel （代码标签，物理在左后）
-    # 注：正前方单轮(φ=0°)横向驱动，按前进键时不转(被动滚轮)，横向时才转。
+    # Three-omni-wheel base kinematics parameters (fill in per measurement of the physical robot)
+    wheel_radius: float = 0.05     # Wheel radius (meters), default 5cm
+    base_radius: float = 0.125     # Distance from base center to wheel (meters), default 12.5cm
+    # Mounting angle of each wheel (degrees): 0° points to robot front; CCW is positive.
+    # Default corresponds to wheel order [base_left_wheel, base_back_wheel, base_right_wheel]:
+    #   φ=240° (rear-right) → base_left_wheel  (code label; physically rear-right)
+    #   φ=0°   (front)      → base_back_wheel  (code label; physically front)
+    #   φ=120° (rear-left)  → base_right_wheel (code label; physically rear-left)
+    # Note: the front wheel (φ=0°) drives sideways; pressing forward, it does not rotate (passive
+    # roller); it only rotates during sideways motion.
     wheel_angles_deg: list = field(default_factory=lambda: [240, 0, 120])
 
     teleop_keys: dict[str, str] = field(

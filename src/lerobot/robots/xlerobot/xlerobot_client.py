@@ -278,7 +278,8 @@ class XLerobotClient(Robot):
         return obs_dict
 
     def _from_keyboard_to_base_action(self, pressed_keys: np.ndarray):
-        """LeKiwi 三轮底盘：速度档位 + 平滑加减速，与后端共用同一套逻辑。"""
+        """LeKiwi three-wheel base: speed levels + smooth acceleration/deceleration; shares the same
+        logic as the back-end."""
         if self.teleop_keys["speed_up"] in pressed_keys:
             self.speed_index = min(self.speed_index + 1, 2)
         if self.teleop_keys["speed_down"] in pressed_keys:

@@ -273,7 +273,8 @@ class FeetechMotorsBus(FeetechCalibrationMixin, MotorsBus):
         return calibration
 
     def write_calibration(self, calibration_dict: dict[str, MotorCalibration], cache: bool = True) -> None:
-        # 写入校准前保证 Lock=0，否则 EEPROM 不可写，限位与 Homing_Offset 无法持久化
+        # Ensure Lock=0 before writing calibration; otherwise EEPROM is not writable and the
+        # position limits and Homing_Offset cannot be persisted.
         for motor in calibration_dict:
             lock = self.read("Lock", motor, normalize=False)
             if int(lock) != 0:
@@ -324,7 +325,8 @@ class FeetechMotorsBus(FeetechCalibrationMixin, MotorsBus):
             if encoding_table and data_name in encoding_table:
                 sign_bit = encoding_table[data_name]
                 val = ids_values[id_]
-                # Homing_Offset 等 12 位符号-数值仅能表示 [-2047, 2047]，超出则夹紧避免编码异常
+                # 12-bit sign-magnitude fields like Homing_Offset can only represent
+                # [-2047, 2047]; clamp to avoid encoding errors when exceeded.
                 if data_name == "Homing_Offset":
                     max_mag = (1 << sign_bit) - 1
                     val = max(-max_mag, min(max_mag, val))

@@ -13,18 +13,19 @@
 # limitations under the License.
 
 """
-飞特 STS/SO 舵机自动校准时使用的默认配置与常量。
+Default configuration and constants used during Feetech STS/SO servo auto-calibration.
 
-供 auto_calibration.py、lerobot_measure_feetech_ranges.py 等统一引用。
+Used by auto_calibration.py, lerobot_measure_feetech_ranges.py, etc.
 """
 
 from .. import Motor, MotorNormMode
 
 # ---------------------------------------------------------------------------
-# 默认位置范围（range_min, range_max）
+# Default position ranges (range_min, range_max)
 # ---------------------------------------------------------------------------
-# SO/STS 常见关节名到 (range_min, range_max) 的默认映射（raw 编码值，含 4096 分辨率）
-# 若关节名不在表中，将使用全量程 (0, max_res)
+# Default mapping from common SO/STS joint names to (range_min, range_max)
+# (raw encoded values, with 4096 resolution).
+# If the joint name is not in the table, the full range (0, max_res) is used.
 SO_STS_DEFAULT_RANGES: dict[str, tuple[int, int]] = {
     "shoulder_pan": (0, 4095),
     "shoulder_lift": (0, 4095),
@@ -36,7 +37,7 @@ SO_STS_DEFAULT_RANGES: dict[str, tuple[int, int]] = {
 
 
 
-# SO 六轴臂关节名 -> 舵机编号（用于打印等）
+# SO 6-axis arm joint name -> servo ID (used for printing, etc.)
 SO_MOTOR_NUMBERS: dict[str, int] = {
     "shoulder_pan": 1,
     "shoulder_lift": 2,
@@ -46,10 +47,10 @@ SO_MOTOR_NUMBERS: dict[str, int] = {
     "gripper": 6,
 }
 
-# SO 六轴臂关节名列表（与 SO_MOTOR_NUMBERS 顺序一致）
+# SO 6-axis arm joint name list (in the same order as SO_MOTOR_NUMBERS)
 MOTOR_NAMES: list[str] = list(SO_MOTOR_NUMBERS.keys())
 
-# SO 标定用电机表（name -> Motor，归一化模式为标定/脚本用）
+# SO calibration motor table (name -> Motor; normalization mode for calibration/scripts)
 SO_FOLLOWER_MOTORS: dict[str, Motor] = {
     "shoulder_pan": Motor(1, "sts3215", MotorNormMode.RANGE_M100_100),
     "shoulder_lift": Motor(2, "sts3215", MotorNormMode.RANGE_M100_100),
@@ -61,51 +62,53 @@ SO_FOLLOWER_MOTORS: dict[str, Motor] = {
 
 
 def motor_label(name: str) -> str:
-    """用于打印的舵机标签：name(id)，例如 shoulder_pan(1)。"""
+    """Servo label for printing: name(id), e.g. shoulder_pan(1)."""
     n = SO_MOTOR_NUMBERS.get(name, "")
     return f"{name}({n})" if n != "" else name
 
 
 # ---------------------------------------------------------------------------
-# 分辨率与中位（4096 步/圈）
+# Resolution and midpoint (4096 steps per turn)
 # ---------------------------------------------------------------------------
 FULL_TURN = 4096
 MID_POS = 2047
-STS_HALF_TURN_RAW = 2047  # 与 MID_POS 相同，回中/归一化时用
+STS_HALF_TURN_RAW = 2047  # Same as MID_POS, used when centering/normalizing
 
-# Homing_Offset 寄存器为 12 位符号-数值编码 (sign_bit_index=11)，可表示 [-2047, 2047]
+# The Homing_Offset register uses 12-bit sign-magnitude encoding (sign_bit_index=11),
+# representable range is [-2047, 2047].
 HOMING_OFFSET_MAX_MAG = 2047
 
 # ---------------------------------------------------------------------------
-# 校准/测量参数
+# Calibration / measurement parameters
 # ---------------------------------------------------------------------------
-DEFAULT_VELOCITY_LIMIT = 1000       # 校准探测限位速度（恒速模式 Goal_Velocity）
-DEFAULT_MAX_TORQUE = 1000           # 最大扭矩（Max_Torque_Limit）
-DEFAULT_TORQUE_LIMIT = 380         # 扭矩限制（Torque_Limit）
-DEFAULT_ACCELERATION = 50           # 加速度（与项目 configure_motors 一致）
-DEFAULT_POS_SPEED = 1000            # 伺服模式 WritePosEx 默认速度
-DEFAULT_P_COEFFICIENT = 16          # PID P 系数（与 so_follower 一致）
-DEFAULT_I_COEFFICIENT = 0           # PID I 系数
-DEFAULT_D_COEFFICIENT = 32          # PID D 系数
-DEFAULT_TIMEOUT = 20.0              # 校准单方向限位等待超时（秒）
-POSITION_TOLERANCE = 20             # 到达目标位置的容差（步）
-# 限位判断 AND 条件：速度近零 + 位置稳定 + Moving=0（优先于 Status BIT5）
-STALL_VELOCITY_THRESHOLD = 3        # 速度接近 0 的阈值（|Present_Velocity| 小于此视为停）
-STALL_POSITION_DELTA_THRESHOLD = 3  # 相邻采样位置变化小于此步数视为不动
-OVERLOAD_SETTLE_TIME = 0.2          # 堵转后关扭矩等待恢复时间（秒）
-SAFE_IO_RETRIES = 5                 # 安全读写重试次数
-SAFE_IO_INTERVAL = 0.2              # 安全读写重试间隔（秒）
+DEFAULT_VELOCITY_LIMIT = 1000       # Calibration limit-probing speed (constant-speed mode Goal_Velocity)
+DEFAULT_MAX_TORQUE = 1000           # Max torque (Max_Torque_Limit)
+DEFAULT_TORQUE_LIMIT = 380          # Torque limit (Torque_Limit)
+DEFAULT_ACCELERATION = 50           # Acceleration (matches project configure_motors)
+DEFAULT_POS_SPEED = 1000            # Default speed for servo-mode WritePosEx
+DEFAULT_P_COEFFICIENT = 16          # PID P coefficient (matches so_follower)
+DEFAULT_I_COEFFICIENT = 0           # PID I coefficient
+DEFAULT_D_COEFFICIENT = 32          # PID D coefficient
+DEFAULT_TIMEOUT = 20.0              # Calibration single-direction limit wait timeout (seconds)
+POSITION_TOLERANCE = 20             # Tolerance for reaching target position (steps)
+# Limit-detection AND condition: velocity near zero + position stable + Moving=0
+# (takes precedence over Status BIT5)
+STALL_VELOCITY_THRESHOLD = 3        # Threshold for velocity near 0 (|Present_Velocity| below this = stopped)
+STALL_POSITION_DELTA_THRESHOLD = 3  # Position change between samples below this step count = not moving
+OVERLOAD_SETTLE_TIME = 0.2          # Wait after disabling torque post-stall for recovery (seconds)
+SAFE_IO_RETRIES = 5                 # Number of safe read/write retries
+SAFE_IO_INTERVAL = 0.2              # Interval between safe read/write retries (seconds)
 
 # ---------------------------------------------------------------------------
-# 展开参数
+# Unfold parameters
 # ---------------------------------------------------------------------------
-DEFAULT_UNFOLD_ANGLE = 45.0         # 展开角度（度）
-DEFAULT_UNFOLD_TIMEOUT = 6.0        # 展开单次运动超时（秒）
-UNFOLD_OVERLOAD_SETTLE = 0.3        # 展开时堵转后关扭矩等待（秒）
-UNFOLD_TOLERANCE_DEG = 5.0          # 展开到位判断：误差在此度数内视为成功
+DEFAULT_UNFOLD_ANGLE = 45.0         # Unfold angle (degrees)
+DEFAULT_UNFOLD_TIMEOUT = 6.0        # Per-motion timeout for unfolding (seconds)
+UNFOLD_OVERLOAD_SETTLE = 0.3        # Wait after disabling torque post-stall during unfold (seconds)
+UNFOLD_TOLERANCE_DEG = 5.0          # Unfold-arrived check: success if error is within this many degrees
 
 # ---------------------------------------------------------------------------
-# 校准/展开顺序（SO 六轴臂）
+# Calibration / unfold order (SO 6-axis arm)
 # ---------------------------------------------------------------------------
 CALIBRATE_FIRST: list[str] = ["shoulder_pan"]
 CALIBRATE_REST: list[str] = [

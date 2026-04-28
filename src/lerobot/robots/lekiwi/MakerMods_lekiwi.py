@@ -71,8 +71,9 @@ HEAD_MOTOR_MAP = {
     "head_motor_2": "head_motor_2",
 }
 
-# LeKiwi 三轮底盘：平滑加减速逻辑已整合到 xlerobot / xlerobot_client 的
-# _from_keyboard_to_base_action（见 lekiwi_base_controller），此处直接调用机器人接口即可。
+# LeKiwi three-wheel base: smooth acceleration/deceleration logic is integrated into
+# xlerobot / xlerobot_client's _from_keyboard_to_base_action (see lekiwi_base_controller);
+# here we just call the robot interface directly.
 
 
 class RectangularTrajectory:
@@ -389,33 +390,33 @@ class SimpleTeleopArm:
     
 
 def main():
-    # ── 硬件串口配置 ─────────────────────────────────────────────────────
-    # 当前模式：仅底盘，三个轮子电机挂在 /dev/ttyACM0
-    # 电机 ID 默认 7/8/9（XLeRobot 标准）；若单独烧录为 1/2/3 请改 xlerobot.py
-    PORT1 = "/dev/ttyACM0"   # 底盘三万向轮
+    # ── Hardware serial port configuration ─────────────────────────────────────────────
+    # Current mode: base only; the three wheel motors are on /dev/ttyACM0
+    # Motor IDs default to 7/8/9 (XLeRobot standard); if separately flashed as 1/2/3, edit xlerobot.py
+    PORT1 = "/dev/ttyACM0"   # Base three omni wheels
 
-    # ── 三万向轮运动学参数（根据实体机测量值修改）─────────────────────────
-    WHEEL_RADIUS   = 0.05    # 轮子半径（米），LeKiwi 标准轮约 5cm
-    BASE_RADIUS    = 0.125   # 底盘中心到轮中心距离（米），约 12.5cm
-    # 三轮位置角（φ）：以机器人正前方为 0°，逆时针为正
-    #   ID7(base_left_wheel)  → φ=0°   = 正前方（前轮，前进时不转）
-    #   ID8(base_back_wheel)  → φ=240° = 右后方
-    #   ID9(base_right_wheel) → φ=120° = 左后方（"左下轮" = ID9）
+    # ── Three-omni-wheel kinematics parameters (edit per measurement of the physical robot) ─────────
+    WHEEL_RADIUS   = 0.05    # Wheel radius (meters); LeKiwi standard wheel is about 5cm
+    BASE_RADIUS    = 0.125   # Distance from base center to wheel center (meters); about 12.5cm
+    # Three-wheel position angles (φ): 0° points to the robot's front, CCW positive.
+    #   ID7(base_left_wheel)  → φ=0°   = front (front wheel; does not rotate when moving forward)
+    #   ID8(base_back_wheel)  → φ=240° = rear-right
+    #   ID9(base_right_wheel) → φ=120° = rear-left ("left lower wheel" = ID9)
     WHEEL_ANGLES   = [0, 240, 120]
 
     FPS = 50
 
-    # ── 仅底盘模式（port2 随便填，不会被使用）────────────────────────────
+    # ── Base-only mode (port2 is irrelevant; not used) ────────────────────────────
     robot_config = XLerobotConfig(
         port1=PORT1,
-        port2=PORT1,   # 未使用，与 port1 相同避免配置报错
+        port2=PORT1,   # unused; same as port1 to avoid config error
         wheel_radius=WHEEL_RADIUS,
         base_radius=BASE_RADIUS,
         wheel_angles_deg=WHEEL_ANGLES,
     )
     robot = XLerobot(robot_config)
 
-    # ── 若底盘连在远端树莓派，改用 ZMQ 连接模式：─────────────────────────
+    # ── If the base is on a remote Raspberry Pi, switch to ZMQ connection mode: ────────────
     # from lerobot.robots.xlerobot import XLerobotClient, XLerobotClientConfig
     # robot_config = XLerobotClientConfig(remote_ip="192.168.1.xxx")
     # robot = XLerobotClient(robot_config)
@@ -431,29 +432,29 @@ def main():
         
     init_rerun(session_name="xlerobot_teleop_v2")
 
-    # ── 仅底盘模式：启动键盘，跳过手臂/头部控制 ─────────────────────────
+    # ── Base-only mode: start keyboard, skip arm/head control ─────────────────────────
     keyboard_config = KeyboardTeleopConfig()
     keyboard = KeyboardTeleop(keyboard_config)
     keyboard.connect()
 
-    print("\n底盘遥控按键：")
-    print("  i/k  → 前进 / 后退")
-    print("  j/l  → 左平移 / 右平移")
-    print("  u/o  → 左原地转 / 右原地转")
-    print("  n/m  → 加速 / 减速（三档）")
-    print("  b    → 退出")
+    print("\nBase teleop keys:")
+    print("  i/k  → forward / backward")
+    print("  j/l  → strafe left / strafe right")
+    print("  u/o  → rotate left in place / rotate right in place")
+    print("  n/m  → speed up / speed down (three levels)")
+    print("  b    → quit")
     print("─" * 35)
 
     try:
         while True:
             pressed_keys = set(keyboard.get_action().keys())
 
-            # 退出
+            # quit
             if robot.teleop_keys.get("quit", "b") in pressed_keys:
-                print("收到退出指令，停止底盘...")
+                print("Received quit command, stopping base...")
                 break
 
-            # 底盘速度指令
+            # Base velocity command
             keyboard_keys = np.array(list(pressed_keys))
             base_action = robot._from_keyboard_to_base_action(keyboard_keys) or {}
 
@@ -465,7 +466,7 @@ def main():
     finally:
         robot.disconnect()
         keyboard.disconnect()
-        print("遥控结束。")
+        print("Teleop finished.")
 
 if __name__ == "__main__":
     main()

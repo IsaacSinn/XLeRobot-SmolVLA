@@ -25,7 +25,7 @@ This repository is forked from [huggingface/lerobot](https://github.com/huggingf
   <table>
     <tr>
       <td align="center" width="33%">
-        <img src="pics/gif/测试素材.gif" alt="Demo 1" width="100%"/>
+        <img src="pics/gif/demo.gif" alt="Demo 1" width="100%"/>
         <p><em>Bimanual manipulation demo</em></p>
       </td>
       <td align="center" width="33%">
@@ -423,15 +423,15 @@ For VR-based robot control, we also developed a ROS2 package that enables intuit
   <table>
     <tr>
       <td align="center" width="33%">
-        <img src="pics/vr_controller/飞书20251203-140454.gif" alt="VR Teleoperation" width="100%"/>
+        <img src="pics/vr_controller/vr_teleop_140454.gif" alt="VR Teleoperation" width="100%"/>
         <p><em>VR Teleoperation</em></p>
       </td>
       <td align="center" width="33%">
-        <img src="pics/vr_controller/飞书20251203-140537.gif" alt="Dual Arm Control" width="100%"/>
+        <img src="pics/vr_controller/vr_teleop_140537.gif" alt="Dual Arm Control" width="100%"/>
         <p><em>Dual Arm Control</em></p>
       </td>
       <td align="center" width="33%">
-        <img src="pics/vr_controller/飞书20251203-140542.gif" alt="Chassis Control" width="100%"/>
+        <img src="pics/vr_controller/vr_teleop_140542.gif" alt="Chassis Control" width="100%"/>
         <p><em>Chassis Control</em></p>
       </td>
     </tr>
@@ -439,7 +439,7 @@ For VR-based robot control, we also developed a ROS2 package that enables intuit
 </div>
 
 <div align="center">
-  <img src="pics/vr_controller/飞书20251204-211845.gif" alt="VR Control Robot" width="60%"/>
+  <img src="pics/vr_controller/vr_teleop_211845.gif" alt="VR Control Robot" width="60%"/>
   <p><em>VR Control Robot in Action</em></p>
 </div>
 
@@ -469,7 +469,7 @@ If you use this work, please cite:
 
 ### This Project
 
-**Contributors:** [IsaacSinn](https://github.com/IsaacSinn) • [yuuubaaa](https://github.com/yuuubaaa) • [Lakesenberg](https://github.com/Lakesenberg) • [MakerMods](https://www.makermods.ai/) • [kahowang (王家浩)](https://github.com/kahowang) • [bubblepan (潘春波)](https://github.com/IIMFINE)
+**Contributors:** [IsaacSinn](https://github.com/IsaacSinn) • [yuuubaaa](https://github.com/yuuubaaa) • [Lakesenberg](https://github.com/Lakesenberg) • [MakerMods](https://www.makermods.ai/) • [kahowang (Wang Jiahao)](https://github.com/kahowang) • [bubblepan (Pan Chunbo)](https://github.com/IIMFINE)
 
 ```bibtex
 @misc{wang2025smolvla_xlerobot,

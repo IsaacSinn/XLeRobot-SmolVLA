@@ -4,19 +4,21 @@
 # you may not use this code except in compliance with the License.
 # See the License for the specific language governing permissions.
 
-"""LeKiwi 三轮全向底盘平滑控制器，供前端（client）与后端（robot）共用。"""
+"""LeKiwi three-wheel omnidirectional base smooth controller, shared by front-end (client) and
+back-end (robot)."""
 
 import time
 
-# LeKiwi 三轮底盘平滑控制参数（与 4_xlerobot_2wheels 一致）
-BASE_ACCELERATION_RATE = 10.0   # 加速斜率 (speed/second)
-BASE_DECELERATION_RATE = 10.0   # 减速斜率
-BASE_MAX_SPEED = 6.0            # 最大速度倍率
-MIN_VELOCITY_THRESHOLD = 0.02   # 减速时最小速度，避免电机骤停
+# LeKiwi three-wheel base smooth-control parameters (matches 4_xlerobot_2wheels)
+BASE_ACCELERATION_RATE = 10.0   # Acceleration slope (speed/second)
+BASE_DECELERATION_RATE = 10.0   # Deceleration slope
+BASE_MAX_SPEED = 6.0            # Max speed multiplier
+MIN_VELOCITY_THRESHOLD = 0.02   # Min velocity during deceleration; avoids abrupt motor stop
 
 
 class SmoothLeKiwiController:
-    """LeKiwi 三轮全向底盘平滑控制器：支持 x/y/theta 方向加减速。"""
+    """LeKiwi three-wheel omnidirectional base smooth controller: supports x/y/theta acceleration
+    and deceleration."""
 
     def __init__(self):
         self.current_speed = 0.0
@@ -25,11 +27,13 @@ class SmoothLeKiwiController:
         self.is_moving = False
 
     def update(self, pressed_keys, robot):
-        """根据按键更新平滑速度，返回 body 系速度 action (x.vel, y.vel, theta.vel)。
+        """Update smoothed velocity based on pressed keys; returns body-frame velocity action
+        (x.vel, y.vel, theta.vel).
 
         Args:
-            pressed_keys: 当前按下的键集合（set 或可迭代，支持 `k in pressed_keys`）。
-            robot: 具备 teleop_keys、speed_levels、speed_index 的机器人实例。
+            pressed_keys: set of currently pressed keys (set or iterable; must support
+                `k in pressed_keys`).
+            robot: robot instance providing teleop_keys, speed_levels, and speed_index.
 
         Returns:
             dict: {"x.vel": float, "y.vel": float, "theta.vel": float}

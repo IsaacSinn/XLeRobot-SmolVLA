@@ -13,16 +13,17 @@
 # limitations under the License.
 
 """
-LeKiwi 底盘控制逻辑（单一来源，与 run_lekiwi_keyboard_only.py 一致）。
-供键盘遥操作脚本与 Web UI「从文件读命令」runner 共用。
-不含电机/键盘/文件 I/O，仅含：键位常量、平滑控制器、三轮逆解、最小机器人接口。
+LeKiwi base (chassis) control logic (single source of truth, matches run_lekiwi_keyboard_only.py).
+Shared by the keyboard teleop script and the Web UI "read commands from file" runner.
+Contains no motor/keyboard/file I/O; only: key constants, smooth controller, three-wheel inverse
+kinematics, and a minimal robot interface.
 """
 
 import time
 
 import numpy as np
 
-# 与 XLeRobot / run_lekiwi_keyboard_only 一致的方向键与档位
+# Directional keys and speed levels matching XLeRobot / run_lekiwi_keyboard_only
 TELEOP_KEYS = {
     "forward": "i",
     "backward": "k",
@@ -47,7 +48,7 @@ MIN_VELOCITY_THRESHOLD = 0.02
 
 
 class SmoothLeKiwiController:
-    """与 run_lekiwi_keyboard_only / XLeRobot lekiwi_base_controller 一致的平滑控制器。"""
+    """Smooth controller matching run_lekiwi_keyboard_only / XLeRobot lekiwi_base_controller."""
 
     def __init__(self):
         self.current_speed = 0.0
@@ -147,7 +148,8 @@ def body_to_wheel_raw(
 
 
 class MinimalLeKiwiRobot:
-    """最小“机器人”对象，供 SmoothLeKiwiController 使用；send_action 需由调用方注入或子类实现 bus.sync_write。"""
+    """Minimal "robot" object for use by SmoothLeKiwiController; send_action requires bus.sync_write
+    to be injected by the caller or implemented by a subclass."""
 
     teleop_keys = TELEOP_KEYS
     speed_levels = SPEED_LEVELS

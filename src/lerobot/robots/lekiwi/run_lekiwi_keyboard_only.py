@@ -14,17 +14,17 @@
 # limitations under the License.
 
 """
-仅 LeKiwi 底盘键盘遥操作（与 4_xlerobot_teleop_keyboard 相同键位）
-- 键位：i 前 k 后 j 左 l 右 u 左转 o 右转，n 加速 m 减速
-- 直接连接 /dev/ttyACM0 上的 7/8/9 号舵机，无需 ZMQ、无需机械臂
-- 需先 chmod 或加入 dialout：sudo chmod 666 /dev/ttyACM0
+LeKiwi base-only keyboard teleoperation (same keys as 4_xlerobot_teleop_keyboard).
+- Keys: i forward, k back, j left, l right, u rotate-left, o rotate-right, n speed-up, m speed-down
+- Connects directly to servos 7/8/9 on /dev/ttyACM0; no ZMQ and no arm required
+- Requires chmod or adding to dialout group first: sudo chmod 666 /dev/ttyACM0
 
-底盘控制逻辑来源于本包 lekiwi_base_control.py（与 Web UI 底盘共用）。
+Base control logic comes from this package's lekiwi_base_control.py (shared with Web UI base).
 
-运行（在项目根或 XLeRobot/software 目录）：
+Run (from project root or XLeRobot/software):
   PYTHONPATH=src python -m lerobot.robots.lekiwi.run_lekiwi_keyboard_only
   PYTHONPATH=src python -m lerobot.robots.lekiwi.run_lekiwi_keyboard_only --port /dev/ttyACM0
-或安装后：
+Or after installation:
   lerobot-lekiwi-keyboard
 """
 
@@ -32,7 +32,7 @@ import argparse
 import sys
 import time
 
-# 底盘控制逻辑：本包统一来源（与 Web UI 从文件读命令的 runner 共用）
+# Base control logic: single source from this package (shared with the Web UI "read commands from file" runner)
 from lerobot.robots.lekiwi.lekiwi_base_control import (
     MinimalLeKiwiRobot,
     SmoothLeKiwiController,
@@ -40,7 +40,7 @@ from lerobot.robots.lekiwi.lekiwi_base_control import (
     SPEED_LEVELS,
 )
 
-# 电机与键盘：优先本仓库 lerobot.motors，若无则回退到 lerobot_new（兼容旧环境）
+# Motors and keyboard: prefer this repo's lerobot.motors; fall back to lerobot_new (legacy compat)
 try:
     from lerobot.motors import Motor, MotorNormMode
     from lerobot.motors.feetech import FeetechMotorsBus, OperatingMode
@@ -55,12 +55,12 @@ from lerobot.teleoperators.keyboard.configuration_keyboard import KeyboardTeleop
 
 def main():
     parser = argparse.ArgumentParser(
-        description="LeKiwi 底盘键盘遥操作（键位同 4_xlerobot_teleop_keyboard）"
+        description="LeKiwi base keyboard teleoperation (same keys as 4_xlerobot_teleop_keyboard)"
     )
-    parser.add_argument("--port", default="/dev/ttyACM0", help="舵机串口")
+    parser.add_argument("--port", default="/dev/ttyACM0", help="Servo serial port")
     args = parser.parse_args()
 
-    print(f"[LeKiwi] 连接 {args.port}（电机 7/8/9）...")
+    print(f"[LeKiwi] Connecting to {args.port} (motors 7/8/9)...")
     bus = FeetechMotorsBus(
         port=args.port,
         motors={
@@ -73,7 +73,7 @@ def main():
     for name in ["base_left_wheel", "base_back_wheel", "base_right_wheel"]:
         bus.write("Operating_Mode", name, OperatingMode.VELOCITY.value)
     bus.enable_torque()
-    print("[LeKiwi] 底盘就绪（VELOCITY 模式）。键位: i/k 前后 j/l 左右 u/o 旋转 n/m 调速 b 退出")
+    print("[LeKiwi] Base ready (VELOCITY mode). Keys: i/k fwd/back j/l left/right u/o rotate n/m speed b quit")
 
     robot = MinimalLeKiwiRobot(bus, args.port)
     smooth = SmoothLeKiwiController()
@@ -84,7 +84,7 @@ def main():
         while True:
             pressed = set(keyboard.get_action().keys())
             if "b" in pressed or "B" in pressed:
-                print("[LeKiwi] 退出")
+                print("[LeKiwi] Quit")
                 break
             if "n" in pressed or "N" in pressed:
                 robot.speed_index = min(robot.speed_index + 1, 2)
@@ -100,7 +100,7 @@ def main():
         )
         bus.disconnect()
         keyboard.disconnect()
-        print("[LeKiwi] 已停车并断开。")
+        print("[LeKiwi] Stopped and disconnected.")
 
 
 if __name__ == "__main__":

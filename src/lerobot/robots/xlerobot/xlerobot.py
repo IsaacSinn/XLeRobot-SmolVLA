@@ -54,16 +54,16 @@ class XLerobot(Robot):
         self.config = config
         self.teleop_keys = config.teleop_keys
         self.speed_levels = [
-            {"xy": 0.1, "theta": 30},  # 慢速
-            {"xy": 0.2, "theta": 60},  # 中速
-            {"xy": 0.3, "theta": 90},  # 快速
+            {"xy": 0.1, "theta": 30},  # slow
+            {"xy": 0.2, "theta": 60},  # medium
+            {"xy": 0.3, "theta": 90},  # fast
         ]
         self.speed_index = 0
         self._lekiwi_smooth_controller = SmoothLeKiwiController()
 
-        # 仅底盘模式：三个轮子电机全部挂在 port1 (/dev/ttyACM0)
-        # 默认 ID 7/8/9（与原 XLeRobot 右臂总线一致）；
-        # 若底盘电机被单独烧录为 1/2/3，请改为 Motor(1,...) Motor(2,...) Motor(3,...)
+        # Base-only mode: all three wheel motors are on port1 (/dev/ttyACM0).
+        # Default IDs are 7/8/9 (matching the original XLeRobot right-arm bus);
+        # if the base motors are flashed separately as 1/2/3, change to Motor(1,...) Motor(2,...) Motor(3,...).
         cal_base = {k: v for k, v in self.calibration.items()
                     if k in ("base_left_wheel", "base_back_wheel", "base_right_wheel")}
         self.bus1 = FeetechMotorsBus(
@@ -83,7 +83,7 @@ class XLerobot(Robot):
 
     @property
     def _state_ft(self) -> dict[str, type]:
-        # 仅底盘模式：只有底盘速度状态
+        # Base-only mode: only base velocity state
         return dict.fromkeys(("x.vel", "y.vel", "theta.vel"), float)
 
     @property
@@ -112,7 +112,7 @@ class XLerobot(Robot):
 
         self.bus1.connect()
 
-        # 底盘轮子使用速度模式，无需位置标定；直接写入默认标定值即可
+        # Base wheels use velocity mode; no position calibration needed. Write default calibration directly.
         self.calibrate()
 
         for cam in self.cameras.values():
@@ -126,10 +126,10 @@ class XLerobot(Robot):
         return self.bus1.is_calibrated
 
     def calibrate(self) -> None:
-        """底盘轮子使用速度模式，无需位置标定。
-        此处自动写入全范围默认标定，homing_offset=0，range=0-4095。
+        """Base wheels use velocity mode; no position calibration needed.
+        This automatically writes a full-range default calibration: homing_offset=0, range=0-4095.
         """
-        logger.info("底盘模式：写入默认速度标定（无需手动操作）")
+        logger.info("Base mode: writing default velocity calibration (no manual operation needed)")
         cal = {}
         for name, motor in self.bus1.motors.items():
             cal[name] = MotorCalibration(
@@ -142,11 +142,11 @@ class XLerobot(Robot):
         self.bus1.write_calibration(cal)
         self.calibration = cal
         self._save_calibration()
-        logger.info("底盘标定完成")
+        logger.info("Base calibration complete")
         
 
     def configure(self):
-        """底盘模式：配置三个轮子为速度控制模式。"""
+        """Base mode: configure all three wheels for velocity control mode."""
         self.bus1.disable_torque()
         self.bus1.configure_motors()
         for name in self.base_motors:
@@ -155,7 +155,7 @@ class XLerobot(Robot):
         
 
     def setup_motors(self) -> None:
-        """底盘模式：仅设置三个轮子电机 ID。"""
+        """Base mode: only set the three wheel motor IDs."""
         for motor in reversed(self.base_motors):
             input(f"Connect the controller board to the '{motor}' motor only and press enter.")
             self.bus1.setup_motor(motor)
@@ -183,22 +183,23 @@ class XLerobot(Robot):
 
 
     def _get_wheel_kinematics_matrix(self, base_radius: float) -> "np.ndarray":
-        """构建三万向轮运动学矩阵（标准全向轮公式）。
+        """Build the three-omni-wheel kinematics matrix (standard omni-wheel formula).
 
-        物理布局（以机器人正前方为 φ=0°，逆时针为正）：
-          φ=0°  ：前轮（横向被动滚轮，前进时不转，横向移动时主动转）
-          φ=120°：左后轮（斜向驱动，约偏后 30°）
-          φ=240°：右后轮（斜向驱动，约偏后 30°）
+        Physical layout (front of robot at φ=0°, CCW positive):
+          φ=0°   : front wheel (lateral passive roller; does not rotate when moving forward, only
+                   rotates when moving sideways)
+          φ=120° : rear-left wheel (diagonal drive, ~30° off-rear)
+          φ=240° : rear-right wheel (diagonal drive, ~30° off-rear)
 
-        标准公式：v_wheel_i = -sin(φ_i)*vx + cos(φ_i)*vy + R*ω
-        矩阵每行：[-sin(φ_i), cos(φ_i), base_radius]
+        Standard formula: v_wheel_i = -sin(φ_i)*vx + cos(φ_i)*vy + R*ω
+        Matrix per row: [-sin(φ_i), cos(φ_i), base_radius]
 
-        验证（前进 vx=1, vy=0, ω=0）：
-          前轮(φ=0°)   : 0         → 被动滚轮滑行 ✓
-          左后轮(φ=120°): -√3/2    → 向后旋转提供前向力 ✓
-          右后轮(φ=240°): +√3/2    → 向前旋转提供前向力 ✓
+        Verification (forward vx=1, vy=0, ω=0):
+          Front wheel (φ=0°)        : 0      → passive roller slide ✓
+          Rear-left wheel (φ=120°)  : -√3/2  → rotates backward, provides forward force ✓
+          Rear-right wheel (φ=240°) : +√3/2  → rotates forward, provides forward force ✓
 
-        修改轮子布局时只需在 XLerobotConfig 中更新 wheel_angles_deg 即可。
+        To change the wheel layout, just update wheel_angles_deg in XLerobotConfig.
         """
         angles = np.radians(np.array(self.config.wheel_angles_deg))
         return np.array([[-np.sin(a), np.cos(a), base_radius] for a in angles])
@@ -210,15 +211,15 @@ class XLerobot(Robot):
         theta: float,
         max_raw: int = 3000,
     ) -> dict:
-        """将底盘体坐标系速度指令转换为三轮原始速度命令。
+        """Convert a base body-frame velocity command into raw three-wheel speed commands.
 
-        参数：
-          x     : x 方向线速度 (m/s)
-          y     : y 方向线速度 (m/s)
-          theta : 自转角速度 (deg/s)
-          max_raw: 单个轮允许的最大原始命令值（超出则等比缩放）
+        Args:
+          x      : linear velocity in x direction (m/s)
+          y      : linear velocity in y direction (m/s)
+          theta  : angular velocity (deg/s)
+          max_raw: max allowed raw command value per wheel; if exceeded, scale proportionally.
 
-        返回：
+        Returns:
           {"base_left_wheel": int, "base_back_wheel": int, "base_right_wheel": int}
         """
         wheel_radius = self.config.wheel_radius
@@ -228,7 +229,7 @@ class XLerobot(Robot):
         theta_rad = theta * (np.pi / 180.0)
         velocity_vector = np.array([x, y, theta_rad])
 
-        # 运动学矩阵：v_wheel = M · [vx, vy, omega_rad]
+        # Kinematics matrix: v_wheel = M · [vx, vy, omega_rad]
         m = self._get_wheel_kinematics_matrix(base_radius)
         wheel_linear_speeds = m.dot(velocity_vector)
         wheel_angular_speeds = wheel_linear_speeds / wheel_radius
@@ -236,7 +237,7 @@ class XLerobot(Robot):
         # rad/s → deg/s
         wheel_degps = wheel_angular_speeds * (180.0 / np.pi)
 
-        # 若超出 max_raw 限制则等比缩放
+        # If max_raw limit is exceeded, scale proportionally
         steps_per_deg = 4096.0 / 360.0
         raw_floats = [abs(degps) * steps_per_deg for degps in wheel_degps]
         max_raw_computed = max(raw_floats)
@@ -257,9 +258,9 @@ class XLerobot(Robot):
         back_wheel_speed,
         right_wheel_speed,
     ) -> "dict[str, Any]":
-        """将三轮原始速度反解为底盘体坐标系速度（逆运动学）。
+        """Invert raw three-wheel speeds back into base body-frame velocity (inverse kinematics).
 
-        返回：{"x.vel": float, "y.vel": float, "theta.vel": float}（单位 m/s 和 deg/s）
+        Returns: {"x.vel": float, "y.vel": float, "theta.vel": float} (units m/s and deg/s)
         """
         wheel_radius = self.config.wheel_radius
         base_radius = self.config.base_radius
@@ -270,10 +271,10 @@ class XLerobot(Robot):
             self._raw_to_degps(right_wheel_speed),
         ])
 
-        # deg/s → rad/s → 线速度 m/s
+        # deg/s → rad/s → linear speed m/s
         wheel_linear_speeds = wheel_degps * (np.pi / 180.0) * wheel_radius
 
-        # 逆运动学：[vx, vy, omega_rad] = M⁻¹ · v_wheel
+        # Inverse kinematics: [vx, vy, omega_rad] = M⁻¹ · v_wheel
         m = self._get_wheel_kinematics_matrix(base_radius)
         m_inv = np.linalg.inv(m)
         velocity_vector = m_inv.dot(wheel_linear_speeds)
@@ -286,8 +287,9 @@ class XLerobot(Robot):
         }
 
     def _from_keyboard_to_base_action(self, pressed_keys: np.ndarray):
-        """LeKiwi 三轮底盘：速度档位 + 平滑加减速，前后端共用同一套逻辑。"""
-        # 速度档位由 n/m 键更新
+        """LeKiwi three-wheel base: speed levels + smooth acceleration/deceleration; same logic
+        shared by front-end and back-end."""
+        # Speed level is updated by the n/m keys
         if self.teleop_keys["speed_up"] in pressed_keys:
             self.speed_index = min(self.speed_index + 1, 2)
         if self.teleop_keys["speed_down"] in pressed_keys:
@@ -322,7 +324,7 @@ class XLerobot(Robot):
         return obs_dict
 
     def send_action(self, action: dict[str, Any]) -> dict[str, Any]:
-        """底盘模式：仅下发轮子速度指令。"""
+        """Base mode: only issue wheel velocity commands."""
         if not self.is_connected:
             raise DeviceNotConnectedError(f"{self} is not connected.")
 
@@ -338,7 +340,7 @@ class XLerobot(Robot):
 
     def stop_base(self):
         self.bus1.sync_write("Goal_Velocity", dict.fromkeys(self.base_motors, 0), num_retry=5)
-        logger.info("底盘电机已停止")
+        logger.info("Base motors stopped")
 
     def disconnect(self):
         if not self.is_connected:
